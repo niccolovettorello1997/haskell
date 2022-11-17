@@ -26,7 +26,7 @@ extractVocab t = map buildEntry $ group $ sort ws
 printAllWords :: Vocabulary -> IO ()
 printAllWords vocab = do
  -- concatenate the words with its count into a single text
- TIO.putStrLn $ T.unlines $ map (\c -> T.append (fst c) (T.pack (": " ++ show (snd c)))) vocab
+ TIO.putStrLn $ T.unlines $ map (\c -> T.append (fst c) (T.pack $ (": " ++ show (snd c)))) vocab
 
 processTextFile :: FilePath -> IO ()
 processTextFile fname = do
