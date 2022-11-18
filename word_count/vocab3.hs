@@ -18,14 +18,24 @@ extractVocabulary t = map buildEntry $ group $ sort ws
   buildEntry [] = error "unexpected empty list"
   cleanWord = T.dropAround (not . isLetter)
 
--- get all words from the vocabulary
+-- get all distinct words from the vocabulary
 allWords :: Vocabulary -> [T.Text]
 allWords vocabulary = map fst vocabulary
 
--- pair:
+-- tuple:
 -- 1: total number of words in text
 -- 2: number of unique words
 wordsCount :: Vocabulary -> (Int, Int)
 wordsCount vocabulary = (sum $ map snd vocabulary, length vocabulary)
 
--- sort the vocabulary by 
+-- sort the vocabulary by comparing frequencies by reversed order
+wordsByFrequency :: Vocabulary -> Vocabulary
+wordsByFrequency = sortBy (comparing $ Down . snd)
+
+-- get a report on words count
+wordsCountReport :: Vocabulary -> T.Text
+wordsCountReport vocabulary = T.unlines [part1, part2]
+ where
+  (total, unique) = wordsCount vocabulary
+  part1 = T.append (T.pack "Total number of words: ") (T.pack $ show total)
+  part2 = T.append (T.pack "Unique number of words: ") (T.pack $ show unique) 
