@@ -1,3 +1,6 @@
+-- enable implicit conversion from String literals to Text
+{-# LANGUAGE OverloadedStrings#-} 
+
 import Data.Char
 import Data.List (group, sort, sortBy)
 import Data.Ord
