@@ -11,6 +11,18 @@
 data Turn = TNone | TLeft | TRight | TAround
  deriving (Eq, Enum, Bounded, Show)
 
+--		| North
+--		|
+--		|
+--		|
+--   West	|        East
+--   ------------------------
+--    		|
+--    		|
+--    		|
+--    		|
+--    		| South
+
 data Direction = North | East | South | West
  deriving (Eq, Enum, Bounded, Show)
 
@@ -29,3 +41,23 @@ class (Eq a, Enum a, Bounded a) => CyclicEnum a where
 
 -- declare that a Direction is an instance of CyclicEnum
 instance CyclicEnum Direction
+
+-- given a Turn and a starting Direction return the resulting Direction
+rotate :: Turn -> Direction -> Direction
+rotate TNone = id
+rotate TLeft = cpred
+rotate TRight = csucc
+rotate TAround = cpred . cpred
+
+-- return the complete list of data constructors, provided that the type implements both Enum and Bounded
+every :: (Enum a, Bounded a) => [a]
+every = enumFrom minBound
+
+-- given two direction, return the list of turns needed to go from the first direction to the second one
+-- note: it's always a single element
+orient :: Direction -> Direction -> Turn
+orient d1 d2 = head $ filter (\t -> rotate t d1 == d2) every
+
+-- apply rotate on a list of turns
+rotateMany :: Direction -> [Turn] -> Direction
+rotateMany = foldl (flip rotate)
