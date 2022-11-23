@@ -61,3 +61,24 @@ orient d1 d2 = head $ filter (\t -> rotate t d1 == d2) every
 -- apply rotate on a list of turns
 rotateMany :: Direction -> [Turn] -> Direction
 rotateMany = foldl (flip rotate)
+
+-- make Turn an instance of Semigroup, therefore defining its concatenation operator
+-- note: the use of commutativity in the last definition
+instance Semigroup Turn where
+ TNone <> t = t
+ TLeft <> TLeft = TAround
+ TLeft <> TRight = TNone
+ TLeft <> TAround = TRight
+ TRight <> TRight = TAround
+ TRight <> TAround = TLeft
+ TAround <> TAround = TNone
+ t1 <> t2 = t2 <> t1
+
+-- make Turn an instance of Monoid by defining the neutral element
+instance Monoid Turn where
+ mempty = TNone
+
+-- thanks to Semigroup and Monoid we can combine immediately a list of turns
+-- therefore rotateMany can be redefined as
+rotateMany' :: Direction -> [Turn] -> Direction
+rotateMany' direction turns = rotate (mconcat turns) dir
