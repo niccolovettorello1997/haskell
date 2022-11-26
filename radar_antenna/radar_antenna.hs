@@ -104,11 +104,18 @@ rotateFromFile direction fname = do
  putStrLn $ "Intermediate directions: " ++ (show $ rotateManySteps direction turns)
 
 -- take the FilePath of a file containing a list of directions and apply orientMany to the list
-
+orientFromFile :: FilePath -> IO ()
+orientFromFile fname = do
+ f <- readFile fname
+ putStrLn $ "List of turns: " ++ (show $ orientMany (map read $ lines f))
  
+-- usage:
+-- -r filename direction -> execute all turns saved in filename starting from provided direction
+-- -o filename -> orient the antenna toward the provided directions and get the list of resulting turns
 main :: IO ()
 main = do
  args <- getArgs
  case args of
   ["-r", fname, direction] -> rotateFromFile (read direction) fname
+  ["-o", fname] -> orientFromFile fname
   _ -> putStrLn $ "Wrong usage" 
