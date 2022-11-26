@@ -1,3 +1,5 @@
+import System.Environment (getArgs)
+
 -- define user data types
 
 -- automatic derivation rules:
@@ -9,7 +11,7 @@
 -- TNone means the void turn
 -- TAround means a 180 degree turn 
 data Turn = TNone | TLeft | TRight | TAround
- deriving (Eq, Enum, Bounded, Show)
+ deriving (Bounded, Enum, Eq, Read, Show)
 
 --		| North
 --		|
@@ -24,7 +26,7 @@ data Turn = TNone | TLeft | TRight | TAround
 --    		| South
 
 data Direction = North | East | South | West
- deriving (Eq, Enum, Bounded, Show)
+ deriving (Bounded, Enum, Eq, Read, Show)
 
 -- define a type class that represents types whose values can be enumerated in a cycle
 -- type constraint: to be a CyclicEnum a class must be an instance of Eq, Bounded and Enum
@@ -62,6 +64,16 @@ orient d1 d2 = head $ filter (\t -> rotate t d1 == d2) every
 rotateMany :: Direction -> [Turn] -> Direction
 rotateMany = foldl (flip rotate)
 
+-- same as rotateMany, but returns all the intermediate directions reached while applying turns
+rotateManySteps :: Direction -> [Turn] -> [Direction]
+rotateManySteps = scanl (flip rotate)
+
+-- same as orient but with a list of directions
+-- list of directions must have at least two elements
+orientMany :: [Direction] -> [Turn]
+orientMany ds@(_:_:_) = zipWith orient ds (tail ds)
+orientMany _ = []
+
 -- make Turn an instance of Semigroup, therefore defining its concatenation operator
 -- note: the use of commutativity in the last definition
 instance Semigroup Turn where
@@ -81,4 +93,22 @@ instance Monoid Turn where
 -- thanks to Semigroup and Monoid we can combine immediately a list of turns
 -- therefore rotateMany can be redefined as
 rotateMany' :: Direction -> [Turn] -> Direction
-rotateMany' direction turns = rotate (mconcat turns) dir
+rotateMany' direction turns = rotate (mconcat turns) direction
+
+-- take a Direction, the FilePath of a file containing a list of turns and print the final Direction reached by applying all the turns
+rotateFromFile :: Direction -> FilePath -> IO ()
+rotateFromFile direction fname = do
+ f <- readFile fname
+ let turns = map read $ lines f
+ putStrLn $ "Final direction: " ++ (show $ rotateMany direction turns)
+ putStrLn $ "Intermediate directions: " ++ (show $ rotateManySteps direction turns)
+
+-- take the FilePath of a file containing a list of directions and apply orientMany to the list
+
+ 
+main :: IO ()
+main = do
+ args <- getArgs
+ case args of
+  ["-r", fname, direction] -> rotateFromFile (read direction) fname
+  _ -> putStrLn $ "Wrong usage" 
