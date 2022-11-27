@@ -11,7 +11,7 @@ import System.Environment (getArgs)
 -- TNone means the void turn
 -- TAround means a 180 degree turn 
 data Turn = TNone | TLeft | TRight | TAround
- deriving (Bounded, Enum, Eq, Read, Show)
+ deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
 --		| North
 --		|
