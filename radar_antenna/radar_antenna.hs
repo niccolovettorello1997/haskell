@@ -1,4 +1,5 @@
 import System.Environment (getArgs)
+import System.Random
 
 -- define user data types
 
@@ -108,7 +109,37 @@ orientFromFile :: FilePath -> IO ()
 orientFromFile fname = do
  f <- readFile fname
  putStrLn $ "List of turns: " ++ (show $ orientMany (map read $ lines f))
- 
+
+-- implement functions needed in order to get random turns and directions
+
+instance Random Turn where
+ randomR (low, high) rng = (toEnum result, rng')
+  where
+   (result, rng') = randomR (fromEnum low, fromEnum high) rng
+
+ random rng = randomR (minBound, maxBound) rng
+
+instance Random Direction where
+ randomR (low, high) rng = (toEnum result, rng')
+  where
+   (result, rng') = randomR (fromEnum low, fromEnum high) rng
+
+ random rng = randomR (minBound, maxBound) rng
+
+-- given a random number generator, get a list of n random turns
+randomTurns :: Int -> StdGen -> [Turn]
+randomTurns 0 _ = []
+randomTurns n rng = [result] ++ randomTurns (n-1) rng'
+ where
+  (result, rng') = random rng
+
+-- given a random number generator, get a list of n random directions
+randomDirections :: Int -> StdGen -> [Direction]
+randomDirections 0 _ = []
+randomDirections n rng = [result] ++ randomDirections (n-1) rng'
+ where
+  (result, rng') = random rng
+
 -- usage:
 -- -r filename direction -> execute all turns saved in filename starting from provided direction
 -- -o filename -> orient the antenna toward the provided directions and get the list of resulting turns
@@ -118,4 +149,4 @@ main = do
  case args of
   ["-r", fname, direction] -> rotateFromFile (read direction) fname
   ["-o", fname] -> orientFromFile fname
-  _ -> putStrLn $ "Wrong usage" 
+  _ -> putStrLn $ unlines $ map show (randomDirections 12 (mkStdGen 2)) 
