@@ -1,7 +1,12 @@
+-- ++++++++++++++++++++++++++++++++++++++++++++++++ IMPORTS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+import Control.Monad (when)
+import Data.List (sort, nub)
 import System.Environment (getArgs)
+import System.Exit
 import System.Random
 
--- define user data types
+-- +++++++++++++++++++++++++++++++++++++++++++++++ DATA TYPES +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 -- automatic derivation rules:
 -- Eq: two values are equal iff they are built from the same constructor, otherwise they are not equal
@@ -45,6 +50,38 @@ class (Eq a, Enum a, Bounded a) => CyclicEnum a where
 -- declare that a Direction is an instance of CyclicEnum
 instance CyclicEnum Direction
 
+-- make Turn an instance of Semigroup, therefore defining its concatenation operator
+-- note: the use of commutativity in the last definition
+instance Semigroup Turn where
+ TNone <> t = t
+ TLeft <> TLeft = TAround
+ TLeft <> TRight = TNone
+ TLeft <> TAround = TRight
+ TRight <> TRight = TAround
+ TRight <> TAround = TLeft
+ TAround <> TAround = TNone
+ t1 <> t2 = t2 <> t1
+
+-- make Turn an instance of Monoid by defining the neutral element
+instance Monoid Turn where
+ mempty = TNone
+
+instance Random Turn where
+ randomR (low, high) rng = (toEnum result, rng')
+  where
+   (result, rng') = randomR (fromEnum low, fromEnum high) rng
+
+ random rng = randomR (minBound, maxBound) rng
+
+instance Random Direction where
+ randomR (low, high) rng = (toEnum result, rng')
+  where
+   (result, rng') = randomR (fromEnum low, fromEnum high) rng
+
+ random rng = randomR (minBound, maxBound) rng
+
+-- +++++++++++++++++++++++++++++++++++++++++++++ FUNCTIONS ++++++++++++++++++++++++++++++++++++++++++++++
+
 -- given a Turn and a starting Direction return the resulting Direction
 rotate :: Turn -> Direction -> Direction
 rotate TNone = id
@@ -75,22 +112,6 @@ orientMany :: [Direction] -> [Turn]
 orientMany ds@(_:_:_) = zipWith orient ds (tail ds)
 orientMany _ = []
 
--- make Turn an instance of Semigroup, therefore defining its concatenation operator
--- note: the use of commutativity in the last definition
-instance Semigroup Turn where
- TNone <> t = t
- TLeft <> TLeft = TAround
- TLeft <> TRight = TNone
- TLeft <> TAround = TRight
- TRight <> TRight = TAround
- TRight <> TAround = TLeft
- TAround <> TAround = TNone
- t1 <> t2 = t2 <> t1
-
--- make Turn an instance of Monoid by defining the neutral element
-instance Monoid Turn where
- mempty = TNone
-
 -- thanks to Semigroup and Monoid we can combine immediately a list of turns
 -- therefore rotateMany can be redefined as
 rotateMany' :: Direction -> [Turn] -> Direction
@@ -110,22 +131,6 @@ orientFromFile fname = do
  f <- readFile fname
  putStrLn $ "List of turns: " ++ (show $ orientMany (map read $ lines f))
 
--- implement functions needed in order to get random turns and directions
-
-instance Random Turn where
- randomR (low, high) rng = (toEnum result, rng')
-  where
-   (result, rng') = randomR (fromEnum low, fromEnum high) rng
-
- random rng = randomR (minBound, maxBound) rng
-
-instance Random Direction where
- randomR (low, high) rng = (toEnum result, rng')
-  where
-   (result, rng') = randomR (fromEnum low, fromEnum high) rng
-
- random rng = randomR (minBound, maxBound) rng
-
 -- given a random number generator, get a list of n random turns
 randomTurns :: Int -> StdGen -> [Turn]
 randomTurns 0 _ = []
@@ -140,13 +145,26 @@ randomDirections n rng = [result] ++ randomDirections (n-1) rng'
  where
   (result, rng') = random rng
 
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+-- Applying orient on every possible pair of Directions returns all possible Turns
+test_allTurnsInUse :: Bool
+test_allTurnsInUse = sort (nub [orient d1 d2 | d1 <- every, d2 <- every]) == every
+
+-- The two implementations of rotateMany are equivalent
+test_rotateManyAreEquivalent :: [Turn] -> Bool
+test_rotateManyAreEquivalent turns = and [rotateMany d turns == rotateMany' d turns | d <- every]
+
+-- orientMany is the inverse function of rotateManySteps
+test_inverse :: [Direction] -> Bool
+test_inverse [] = True
+test_inverse ds@(d:_) = ds == rotateManySteps d (orientMany ds)  
+
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 -- usage:
 -- -r filename direction -> execute all turns saved in filename starting from provided direction
 -- -o filename -> orient the antenna toward the provided directions and get the list of resulting turns
 main :: IO ()
 main = do
- args <- getArgs
- case args of
-  ["-r", fname, direction] -> rotateFromFile (read direction) fname
-  ["-o", fname] -> orientFromFile fname
-  _ -> putStrLn $ unlines $ map show (randomDirections 12 (mkStdGen 2)) 
+ when (not $ and [test_allTurnsInUse, test_rotateManyAreEquivalent (randomTurns 100 (mkStdGen 17)), test_inverse (randomDirections 100 (mkStdGen 40))]) exitFailure
